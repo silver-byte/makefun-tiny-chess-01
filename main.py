@@ -67,8 +67,10 @@ def play(P,m):
  return tuple(a),-s,c,ne
 def mv(P,q=0):
  for m in gen(P):
-  if q and not C(P,m):continue
+  c=C(P,m)
+  if q>1 and not c:continue
   b,s,_,_=play(P,m)
+  if q==1 and not c and not atk(b,b.index(s*6),-s):continue
   if s*6 in b and not atk(b,b.index(-s*6),s):yield m
 def val(P):
  b=P[0];t=0;h=min(32,sum(A(z)-1 for z in b if 1<A(z)<6))
@@ -76,36 +78,33 @@ def val(P):
   if not p:continue
   s=1-2*(p<0);k=A(p);r=A(7*(s<0)-i//16);f=i&7;x=V[k]
   if k==1:
-   x+=r*5-h*r*(A(2*f-7)>4)
-   if all(j&136 or b[j]!=-s for j in(i+15*s,i+16*s,i+17*s)):x+=r*r
+   x+=r*(5-h//8)-h*r*(A(2*f-7)>4)
+   if all(j&136 or b[j]!=-s for j in(i+15*s,i+16*s,i+17*s)):x+=r*r*(32-h)//16
   elif k in(2,3):x+=30-5*(A(2*f-7)+A(2*r-7))
-  elif k==6:x+=12*sum(not(i+s*d)&136 and b[i+s*d]==s for d in(15,16,17))-h*(r*2+min(f,7-f))+(32-h)*(20-5*(A(f-3.5)+A(r-3.5)))
+  elif k==6:x+=20*sum(not(i+s*d)&136 and b[i+s*d]==s for d in(15,16,17))-h*(r*2+min(f,7-f)+3*(s not in b[f::16]))+(32-h)*(20-5*(A(f-3.5)+A(r-3.5)))*(-s*5 not in b)
   t+=s*x
  return int(t*P[1])
 T={};K={};n=0
 def C(P,m):return P[0][m[1]]or(A(P[0][m[0]])==1 and m[1]==P[3])or m[2]
-def O(P,a,t=0,d=0):
- b=P[0];return sorted(a,key=lambda m:(m==t)*9e4+(m==K.get(d))*4e3+V[A(b[m[1]])]*16-V[A(b[m[0]])]+m[2]*9e2,reverse=1)
-def search(P,d,a,z,h=0,u=1):
+def O(P,a,d=0):
+ b=P[0];return sorted(a,key=lambda m:(m==K.get(d))*4e3+V[A(b[m[1]])]*16-V[A(b[m[0]])]+m[2]*9e2,reverse=1)
+def search(P,d,a,z,h=0):
  global n;n+=1
  if n>L:raise EOFError
- b,s,c,e=P;check=atk(b,b.index(s*6),-s);M=list(mv(P,d<1 and not check))
+ b,s,c,e=P;check=atk(b,b.index(s*6),-s);M=list(mv(P,(d<1 and not check)*(1+(d<0))))
  if d<1 and not check:
   x=val(P)
   if x>=z:return z
   if x>a:a=x
- q=P,d;w=T.get(q);tm=w[1]if w else 0
- if w and w[0]>=z:return w[0]
- if u and d>2 and not check and any(x*s>0 and 1<A(x)<6 for x in b):
-  x=-search((b,-s,c,-1),d-3,-z,-z+1,h+1,0)
-  if x>=z:return z
+ q=P,d;w=T.get(q)
+ if w and w>=z:return w
  if not M:return -3e4+h if check else 0
- for i,m in E(O(P,M,tm,h)):
+ for i,m in E(O(P,M,h)):
   Q=play(P,m)
-  r=i>3 and d>2 and not C(P,m)
+  r=i>3 and d>2 and not C(P,m)and not atk(Q[0],Q[0].index(Q[1]*6),-Q[1])
   if i:x=-search(Q,d-1-r,-a-1,-a,h+1);x=-search(Q,d-1,-z,-a,h+1)if x>a else x
   else:x=-search(Q,d-1,-z,-a,h+1)
-  if x>a:a=x;T[q]=x,m
+  if x>a:a=x;T[q]=x
   if a>=z:
    if not C(P,m):K[h]=m
    break
