@@ -4,7 +4,8 @@ V=0,100,300,310,500,900,2e4
 A=abs;E=enumerate
 R=1,-1,16,-16;B=15,17,-15,-17
 D={2:(33,31,18,14,-33,-31,-18,-14),3:B,4:R,5:R+B,6:R+B}
-L=2e4
+L=3e4
+J=[[[V[k]+(k==1)*(r*(5-h//8)-h*r*(A(2*f-7)>4))+(k in(2,3))*(30-5*A(2*f-7)-5*A(2*r-7))+(k==6)*(-h*(r*2+min(f,7-f))+(32-h)*(20-5*A(f-3.5)-5*A(r-3.5)))for r in range(8)for f in range(8)]for k in range(7)]for h in range(33)]
 def fen(f):
  p=f.split();b=[0]*128
  for r,x in zip(range(7,-1,-1),p[0].split('/')):
@@ -53,10 +54,10 @@ def gen(P):
      yield i,j,0
      if b[j]or k in(2,6):break
      j+=d
-    if k==6 and not atk(b,i,-s):
-     a=112*(s<0)
-     if c&1+3*(s<0)and b[a+5]==b[a+6]==0 and b[a+7]==s*4 and not atk(b,a+5,-s)and not atk(b,a+6,-s):yield i,a+6,0
-     if c&2+6*(s<0)and b[a+1]==b[a+2]==b[a+3]==0 and b[a]==s*4 and not atk(b,a+3,-s)and not atk(b,a+2,-s):yield i,a+2,0
+   if k==6 and not atk(b,i,-s):
+    a=112*(s<0)
+    for j,r,x in((a+6,a+7,1+3*(s<0)),(a+2,a,2+6*(s<0))):
+     if c&x and b[r]==s*4 and all(not b[q]for q in range(min(i,r)+1,max(i,r)))and not atk(b,(i+j)//2,-s)and not atk(b,j,-s):yield i,j,0
 def play(P,m):
  b,s,c,e=P;i,j,u=m;a=list(b);p=a[i];z=a[j];a[i]=0;a[j]=s*u if u else p
  if A(p)==1 and j==e and not z:a[j-16*s]=0
@@ -76,18 +77,14 @@ def val(P):
  b=P[0];t=0;h=min(32,sum(A(z)-1 for z in b if 1<A(z)<6))
  for i,p in E(b):
   if not p:continue
-  s=1-2*(p<0);k=A(p);r=A(7*(s<0)-i//16);f=i&7;x=V[k]
-  if k==1:
-   x+=r*(5-h//8)-h*r*(A(2*f-7)>4)
-   if all(j&136 or b[j]!=-s for j in(i+15*s,i+16*s,i+17*s)):x+=r*r*(32-h)//16
-  elif k in(2,3):x+=30-5*(A(2*f-7)+A(2*r-7))
-  elif k==6:x+=20*sum(not(i+s*d)&136 and b[i+s*d]==s for d in(15,16,17))-h*(r*2+min(f,7-f)+3*(s not in b[f::16]))+(32-h)*(20-5*(A(f-3.5)+A(r-3.5)))*(-s*5 not in b)
+  s=1-2*(p<0);k=A(p);r=A(7*(s<0)-i//16);f=i&7;x=J[h][k][r*8+f]
+  if k==6:x+=20*sum(not(i+s*d)&136 and b[i+s*d]==s for d in(15,16,17))-h*3*(s not in b[f::16])-(32-h)*(20-5*(A(f-3.5)+A(r-3.5)))*(-s*5 in b)
   t+=s*x
  return int(t*P[1])
-T={};K={};n=0
+T={};n=0
 def C(P,m):return P[0][m[1]]or(A(P[0][m[0]])==1 and m[1]==P[3])or m[2]
-def O(P,a,d=0):
- b=P[0];return sorted(a,key=lambda m:(m==K.get(d))*4e3+V[A(b[m[1]])]*16-V[A(b[m[0]])]+m[2]*9e2,reverse=1)
+def O(P,a):
+ b=P[0];return sorted(a,key=lambda m:V[A(b[m[1]])]*16-V[A(b[m[0]])]+m[2]*9e2,reverse=1)
 def search(P,d,a,z,h=0):
  global n;n+=1
  if n>L:raise EOFError
@@ -96,21 +93,20 @@ def search(P,d,a,z,h=0):
   x=val(P)
   if x>=z:return z
   if x>a:a=x
+  M=[m for m in M if not b[m[1]]or m[2]or x+V[A(b[m[1]])]+150>a]
  q=P,d;w=T.get(q)
  if w and w>=z:return w
  if not M:return -3e4+h if check else 0
- for i,m in E(O(P,M,h)):
+ for i,m in E(O(P,M)):
   Q=play(P,m)
   r=i>3 and d>2 and not C(P,m)and not atk(Q[0],Q[0].index(Q[1]*6),-Q[1])
   if i:x=-search(Q,d-1-r,-a-1,-a,h+1);x=-search(Q,d-1,-z,-a,h+1)if x>a else x
   else:x=-search(Q,d-1,-z,-a,h+1)
   if x>a:a=x;T[q]=x
-  if a>=z:
-   if not C(P,m):K[h]=m
-   break
+  if a>=z:break
  return a
 def choose(f,A):
- global n,T,K;P=fen(f);best=A[0];T={};K={}
+ global n,T;P=fen(f);best=A[0];T={}
  for d in range(1,9):
   n=0
   try:
