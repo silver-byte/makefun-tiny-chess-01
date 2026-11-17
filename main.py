@@ -1,17 +1,17 @@
 import re
-W=[100,320,366,549,1000,105,21,150]
+W=[100,320,366,549,1000,105,21,150,12,8]
 L=3e4
-A=abs;E=enumerate;G=range;Q=' PNBRQK'
+A=abs;E=enumerate;G=range;Q='kqrbnp PNBRQK'
 R=1,-1,16,-16;B=15,17,-15,-17
 D={2:(33,31,18,14,-33,-31,-18,-14),3:B,4:R,5:R+B,6:R+B}
-J=[[r*8 if k==1 else 24-3*A(2*f-7)-3*A(2*r-7)if k in(2,3)else 0 for r in G(8)for f in G(8)]for k in G(7)]
+J=[[(k==1)*r*8+(1<k<4)*(24-3*A(2*f-7)-3*A(2*r-7))for r in G(8)for f in G(8)]for k in G(7)]
 def F(f):
- p=f.split();b=[0]*128
+ p=f.split();b=[0]*144
  for r,x in zip(G(7,-1,-1),p[0].split('/')):
   q=0
   for z in x:
    if z<'A':q+=int(z)
-   else:b[r*16+q]=(1-2*z.islower())*Q.index(z.upper());q+=1
+   else:b[r*16+q]=Q.index(z)-6;q+=1
  c=sum(1<<'KQkq'.index(z)for z in p[2]if z>'-');e=-1 if p[3]=='-'else ord(p[3][0])-97+16*(int(p[3][1])-1)
  return tuple(b),2*(p[1]=='w')-1,c,e,*map(int,p[4:])
 def X(b,q,s):
@@ -33,7 +33,6 @@ def X(b,q,s):
  for d in D[6]:
   x=q+d
   if not x&136 and b[x]==s*6:return 1
- return 0
 def g(P):
  b,s,c,e=P[:4]
  for i,p in E(b):
@@ -71,19 +70,21 @@ def N(P):
   q=Y(P,m);b,s=q[:2]
   if s*6 in b and not X(b,b.index(-s*6),s):yield m
 def U(m):
- i,j,p=m;return chr(97+(i&7))+str(i//16+1)+chr(97+(j&7))+str(j//16+1)+('  nbrq'[p]if p else'')
+ i,j,p=m;return'%c%d%c%d%s'%(97+(i&7),i//16+1,97+(j&7),j//16+1,' nbrq'[p-1:p])
 def O(P):
- b,s,c,e,h,f=P;v='/'.join(re.sub(r'\.+',lambda m:str(len(m[0])),''.join('.'if not p else(Q[A(p)]if p>0 else Q[A(p)].lower())for p in b[r*16:r*16+8]))for r in G(7,-1,-1))
+ b,s,c,e,h,f=P;v='/'.join(re.sub(r'\.+',lambda m:str(len(m[0])),''.join('.'if not p else Q[p+6]for p in b[r*16:r*16+8]))for r in G(7,-1,-1))
  c=''.join(x for i,x in E('KQkq')if c>>i&1)or'-';e='-'if e<0 else chr(97+(e&7))+str(e//16+1)
  return v+' '+('w'if s>0 else'b')+' '+c+' '+e+f' {h} {f}'
 legal=lambda f:[U(m)for m in N(F(f))]
 def apply(f,u):
  P=F(f);return O(Y(P,next(m for m in N(P)if U(m)==u)))
 def val(P):
- b,s=P[:2];t=0
+ b,s=P[:2];t=0;h=min(32,sum(map(A,b))-12)
  for i,p in E(b):
   if p:k=A(p);r=A(7*(p<0)-i//16);t+=(1-2*(p<0))*(W[k-1]+J[k][r*8+(i&7)]*W[5]//100)
- t+=W[6]*((b.count(3)>1)-(b.count(-3)>1));return t*s
+ t+=W[6]*((b.count(3)>1)-(b.count(-3)>1))
+ for p in-1,1:i=b.index(p*6);t+=p*(W[8]*sum(b[i+p*d]==p for d in G(15,18))-W[9]*h*(A(7*(p<0)-i//16)+(2<i&7<5))//32)
+ return t*s
 Z=EOFError;T=K={};n=0
 def H(P):
  b,s,c,e=P[:4];z=c*17^(e+1)*31^(s<0)
@@ -93,7 +94,7 @@ def H(P):
 def S(P,d,a,z,h=0):
  global n;n+=1
  if n>L:raise Z
- b,s=P[:2];k=H(P);t=T.get(k);q=t if t else 0;c=X(b,b.index(s*6),-s);M=list(N(P))
+ b,s=P[:2];k=H(P);q=T.get(k)or 0;c=X(b,b.index(s*6),-s);M=[*N(P)]
  if d<1 and not c:
   x=val(P)
   if x>=z:return z
@@ -108,10 +109,10 @@ def S(P,d,a,z,h=0):
    if not b[m[1]]:K[h]=m
    break
  T[k]=q;return a
-def best(f):
- global n,T,K;P=F(f);r=next(N(P));n=0;T={};K={}
+def best(f,A=0):
+ global n,T,K;P=F(f);n=0;T={};K={}
  try:
-  for d in G(1,20):
+  for d in G(1,9):
    a=-3e4
    for m in N(P):
     x=-S(Y(P,m),d-1,-3e4,-a,1)
@@ -119,11 +120,10 @@ def best(f):
    r=b
  except Z:pass
  return U(r)
-choose=lambda f,A:best(f)
-if __name__=='__main__':
+choose=best
+if __name__<'a':
  import os,json
  from urllib.request import*
- q=os.getenv('MAKEFUN_ENV_URL')
- p=lambda a,x:json.load(urlopen(Request(q+a,json.dumps(x).encode())))
+ p=lambda a,x:json.load(urlopen(Request(os.getenv('MAKEFUN_ENV_URL')+a,json.dumps(x).encode())))
  while(v:=p('/game',{}))['status']!='done':
-  while v['status']=='your_move':v=p('/move',{'game':v['game'],'move':choose(v['fen'],v['legal_moves'])})
+  while v['status'][0]=='y':v=p('/move',{'game':v['game'],'move':choose(v['fen'],v['legal_moves'])})
