@@ -94,12 +94,13 @@ def S(P,d,a,z,h=0):
  global n;n+=1
  if n>L:raise Z
  b,s=P[:2];k=H(P);t=T.get(k);q=t if t else 0;c=X(b,b.index(s*6),-s);M=list(N(P))
+ if not M:return c and-3e4+h
  if d<1 and not c:
   x=val(P)
   if x>=z:return z
   if x>a:a=x
   M=[m for m in M if b[m[1]]or m[2]]
- if not M:return -3e4+h if c else 0
+ if not M:return a
  M.sort(key=lambda m:(m==q)*1e6+(m==K.get(h))*1e5+(b[m[1]]and W[A(b[m[1]])-1])*16-W[A(b[m[0]])-1],reverse=1)
  for m in M:
   x=-S(Y(P,m),d-1,-z,-a,h+1)
