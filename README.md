@@ -8,7 +8,9 @@ A chess engine in under 4 KB of Python: negamax alpha-beta search on a fixed nod
 
 ## Run it
 
-
+```sh
+node cli/makefun.mjs grade-local --kit . --bot <this repository> --driver docker
+```
 
 Run from inside the unpacked tiny-chess-01 dev kit: it plays a practice trial against the house engines, replays it, and prints the Elo the scorer gives it.
 
