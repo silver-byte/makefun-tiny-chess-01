@@ -1,7 +1,10 @@
-import os,json,urllib.request
+import os,json
+from urllib.request import*
 V=0,100,300,310,500,900,20000
-D={2:(33,31,18,14,-33,-31,-18,-14),3:(15,17,-15,-17),4:(1,-1,16,-16),5:(1,-1,16,-16,15,17,-15,-17),6:(1,-1,16,-16,15,17,-15,-17)}
-L=7000
+A=abs
+R=1,-1,16,-16;B=15,17,-15,-17
+D={2:(33,31,18,14,-33,-31,-18,-14),3:B,4:R,5:R+B,6:R+B}
+L=10000
 def fen(f):
  p=f.split();b=[0]*128
  for r,x in zip(range(7,-1,-1),p[0].split('/')):
@@ -24,7 +27,7 @@ def atk(b,q,s):
    while not x&136:
     z=b[x]
     if z:
-     if z*s>0 and abs(z)in(k,5):return 1
+     if z*s>0 and A(z)in(k,5):return 1
      break
     x+=d
  for d in D[6]:
@@ -35,7 +38,7 @@ def gen(P):
  b,s,c,e=P
  for i,p in enumerate(b):
   if p*s<1:continue
-  k=abs(p)
+  k=A(p)
   if k==1:
    d=16*s;j=i+d
    if not b[j]:
@@ -56,9 +59,9 @@ def gen(P):
     if c&(2 if s>0 else 8)and b[a+1]==b[a+2]==b[a+3]==0 and b[a]==s*4 and not atk(b,a+3,-s)and not atk(b,a+2,-s):yield i,a+2,0
 def play(P,m):
  b,s,c,e=P;i,j,u=m;a=list(b);p=a[i];z=a[j];a[i]=0;a[j]=s*u if u else p
- if abs(p)==1 and j==e and not z:a[j-16*s]=0
- if abs(p)==6 and abs(j-i)==2:r=(7 if j>i else 0)+(0 if s>0 else 112);a[(i+j)//2]=a[r];a[r]=0
- ne=i+16*s if abs(p)==1 and abs(j-i)==32 else-1
+ if A(p)==1 and j==e and not z:a[j-16*s]=0
+ if A(p)==6 and A(j-i)==2:r=(7 if j>i else 0)+(0 if s>0 else 112);a[(i+j)//2]=a[r];a[r]=0
+ ne=i+16*s if A(p)==1 and A(j-i)==32 else-1
  for q,x in((4,3),(0,2),(7,1),(116,12),(112,8),(119,4)):
   if i==q or j==q:c&=~x
  return tuple(a),-s,c,ne
@@ -67,20 +70,24 @@ def moves(P):
   Q=play(P,m);b,s,_,_=Q
   if s*6 in b and not atk(b,b.index(-s*6),s):yield m
 def val(P):
- t=0
- for i,p in enumerate(P[0]):
+ b=P[0];t=25*((b.count(3)>1)-(b.count(-3)>1))
+ for i,p in enumerate(b):
   if not p:continue
-  k=abs(p);r=i//16 if p>0 else 7-i//16;f=i&7;x=V[k]
-  if k==1:x+=r*3-3*abs(f-3.5)
-  elif k in(2,3):x+=30-6*(abs(f-3.5)+abs(r-3.5))
-  elif k==6:x+=(-6*(r+abs(f-3.5))if sum(abs(z)in(4,5)for z in P[0])>2 else 6*(r-abs(f-3.5)))
-  t+=(1 if p>0 else-1)*x
+  s=1 if p>0 else-1;k=A(p);r=i//16 if s>0 else 7-i//16;f=i&7;x=V[k]
+  if k==1:
+   x+=r*5-3*A(f-3.5)
+   if not any(q==-s and A((j&7)-f)<2 and(j//16-i//16)*s>0 for j,q in enumerate(b)):x+=r*r*3
+  elif k in(2,3):x+=35-6*(A(f-3.5)+A(r-3.5))+r*2
+  elif k==4:
+   q=b[f::16];x+=12*(s not in q)+8*(not any(A(z)==1 for z in q))+15*(r==6)
+  elif k==6:x+=12*sum(not(i+s*d)&136 and b[i+s*d]==s for d in(15,16,17))
+  t+=s*x
  return int(t*P[1])
 T={};K={};n=0
 class S(Exception):pass
-def capture(P,m):return P[0][m[1]]or(abs(P[0][m[0]])==1 and m[1]==P[3])or m[2]
+def capture(P,m):return P[0][m[1]]or(A(P[0][m[0]])==1 and m[1]==P[3])or m[2]
 def order(P,a,t=0,d=0):
- b=P[0];return sorted(a,key=lambda m:(m==t)*99999+(m==K.get(d))*4000+V[abs(b[m[1]])]*16-V[abs(b[m[0]])]+m[2]*900,reverse=True)
+ b=P[0];return sorted(a,key=lambda m:(m==t)*99999+(m==K.get(d))*4000+V[A(b[m[1]])]*16-V[A(b[m[0]])]+m[2]*900,reverse=True)
 def search(P,d,a,z,h=0):
  global n;n+=1
  if n>L:raise S
@@ -93,13 +100,10 @@ def search(P,d,a,z,h=0):
  q=P,d;w=T.get(q);tm=w[1]if w else 0
  if w and w[0]>=z:return w[0]
  if not M:return -30000+h if check else 0
- best=-30000
- for i,m in enumerate(order(P,M,tm,h)):
+ for m in order(P,M,tm,h):
   Q=play(P,m)
-  if i:x=-search(Q,d-1,-a-1,-a,h+1);x=-search(Q,d-1,-z,-a,h+1)if x>a and x<z else x
-  else:x=-search(Q,d-1,-z,-a,h+1)
-  if x>best:best=x;T[q]=x,m
-  if x>a:a=x
+  x=-search(Q,d-1,-z,-a,h+1)
+  if x>a:a=x;T[q]=x,m
   if a>=z:
    if not capture(P,m):K[h]=m
    break
@@ -120,7 +124,7 @@ def choose(f,A):
  return best
 U=os.environ['MAKEFUN_ENV_URL']
 def post(p,x):
- r=urllib.request.Request(U+p,json.dumps(x).encode(),{'Content-Type':'application/json'});return json.load(urllib.request.urlopen(r))
+ r=Request(U+p,json.dumps(x).encode(),{'Content-Type':'application/json'});return json.load(urlopen(r))
 while 1:
  g=post('/game',{})
  if g['status']=='done':break
