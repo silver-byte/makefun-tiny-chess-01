@@ -125,5 +125,5 @@ if __name__=='__main__':
  from urllib.request import*
  q=os.getenv('MAKEFUN_ENV_URL')
  p=lambda a,x:json.load(urlopen(Request(q+a,json.dumps(x).encode())))
- while(g:=p('/game',{}))['status']!='done':
-  while g['status']=='your_move':g=p('/move',{'game':g['game'],'move':choose(g['fen'],g['legal_moves'])})
+ while(v:=p('/game',{}))['status']!='done':
+  while v['status']=='your_move':v=p('/move',{'game':v['game'],'move':choose(v['fen'],v['legal_moves'])})
